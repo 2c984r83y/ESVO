@@ -41,7 +41,7 @@ void DepthProblemSolver::solve(
     jobs[i].pStamped_TS_obs_ = pStampedTsObs;
     if(dpType_ == NUMERICAL)
       jobs[i].numDiff_dProblemPtr_ = std::make_shared<Eigen::NumericalDiff<DepthProblem> >(dpConfigPtr_, camSysPtr_);
-    else if(dpType_ == ANALYTICAL)
+    else if(dpType_ == )
       jobs[i].dProblemPtr_ = std::make_shared<DepthProblem>(dpConfigPtr_, camSysPtr_); //NOTE: The ANALYTICAL version is not provided in this version.
     else
     {
@@ -136,19 +136,21 @@ void DepthProblemSolver::solve_multiple_problems(Job & job)
 }
 
 bool DepthProblemSolver::solve_single_problem_numerical(
-  double d_init,
-  std::shared_ptr< Eigen::NumericalDiff<DepthProblem> > & dProblemPtr,
-  double* result)
+  double d_init, // 初始深度估计
+  std::shared_ptr< Eigen::NumericalDiff<DepthProblem> > & dProblemPtr, // 数值微分对象指针
+  double* result) // 存储优化结果的数组指针
 {
-  Eigen::VectorXd x(1);
+  Eigen::VectorXd x(1); // 创建具有一个元素的 Eigen 向量 x，表示初始深度估计
   x << d_init;
 
+  // 创建 Levenberg-Marquardt 优化器 lm，使用数值微分对象进行初始化
   Eigen::LevenbergMarquardt<Eigen::NumericalDiff<DepthProblem>, double> lm(*(dProblemPtr.get()));
   lm.resetParameters();
-  lm.parameters.ftol = 1e-6;//1.E10*Eigen::NumTraits<double>::epsilon();
-  lm.parameters.xtol = 1e-6;//1.E10*Eigen::NumTraits<double>::epsilon();
-  lm.parameters.maxfev = dpConfigPtr_->MAX_ITERATION_ * 3;
+  lm.parameters.ftol = 1e-6; // 设置函数值变化的容忍度
+  lm.parameters.xtol = 1e-6; // 设置参数变化的容忍度
+  lm.parameters.maxfev = dpConfigPtr_->MAX_ITERATION_ * 3; // 设置最大迭代次数
 
+  // 使用初始深度估计初始化优化器
   if(lm.minimizeInit(x) == Eigen::LevenbergMarquardtSpace::ImproperInputParameters)
   {
     LOG(ERROR) << "ImproperInputParameters for LM (Mapping)." << std::endl;
@@ -158,16 +160,17 @@ bool DepthProblemSolver::solve_single_problem_numerical(
   size_t iteration = 0;
   int optimizationState = 0;
 
+  // 运行优化器，最大迭代次数由 dpConfigPtr_->MAX_ITERATION_ 参数指定
   while(true)
   {
-    Eigen::LevenbergMarquardtSpace::Status status = lm.minimizeOneStep(x);
+    Eigen::LevenbergMarquardtSpace::Status status = lm.minimizeOneStep(x); // 执行一次优化步骤
 
     iteration++;
     if(iteration >= dpConfigPtr_->MAX_ITERATION_)
       break;
 
     bool terminate = false;
-    if(status == 2 || status == 3)
+    if(status == 2 || status == 3) // 判断优化状态
     {
       switch (optimizationState)
       {
@@ -187,29 +190,28 @@ bool DepthProblemSolver::solve_single_problem_numerical(
       break;
   }
 
-  // Since there is no way to set a optimization bound
-  // on x in Eigen (as far as I know), a handy outlier rejection is applied here.
-  if(x(0) <= 0.001)// we cannot see that far, right?
+  // 由于 Eigen 中没有设置参数边界的方法，因此在此应用方便的异常值拒绝方法
+  if(x(0) <= 0.001) // 如果深度估计小于等于 0.001，则返回 false
     return false;
 
-  // update
+  // 更新结果数组
   result[0] = x(0);
-  // calculate the variance according to
-  // https://android.googlesource.com/platform/external/eigen/+/jb-mr2-release/unsupported/test/NonLinearOptimization.cpp
+
+  // 计算方差
   Eigen::internal::covar(lm.fjac, lm.permutation.indices());
-  if(dpConfigPtr_->LSnorm_ == "l2")
+  if(dpConfigPtr_->LSnorm_ == "l2") // 如果使用 L2 范数
   {
     double fnorm = lm.fvec.blueNorm();
     double covfac = fnorm * fnorm / (dProblemPtr->values() - dProblemPtr->inputs());
     Eigen::MatrixXd cov = covfac * lm.fjac.topLeftCorner<1,1>();
     result[1] = cov(0,0);
   }
-  if(dpConfigPtr_->LSnorm_ == "Tdist")
+  if(dpConfigPtr_->LSnorm_ == "Tdist") // 如果使用 T 分布
   {
     Eigen::MatrixXd invSumJtT = lm.fjac.topLeftCorner<1,1>();
     result[1] = std::pow(dpConfigPtr_->td_stdvar_,2) * invSumJtT(0,0);
   }
-  result[2] = lm.fnorm * lm.fnorm;
+  result[2] = lm.fnorm * lm.fnorm; // 计算残差平方和
   return true;
 }
 

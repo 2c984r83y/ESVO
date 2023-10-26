@@ -130,7 +130,15 @@ esvo_Mapping::esvo_Mapping(
   // system status
   ESVO_System_Status_ = "INITIALIZATION";
   nh_.setParam("/ESVO_SYSTEM_STATUS", ESVO_System_Status_);
-
+  /*
+  回调函数（callback function）是一种函数，它作为参数传递给另一个函数，并在特定事件发生时被调用。
+  回调函数通常用于异步编程，例如在事件驱动的系统中，当事件发生时，回调函数会被调用。
+  回调函数通常用于处理异步事件，例如ROS中的消息处理。
+  当ROS节点接收到消息时，它会调用相应的回调函数来处理该消息。
+  回调函数可以执行任何操作，例如更新状态、发布消息或执行其他计算。
+  这些回调函数在不同的事件发生时被调用，
+  例如当接收到姿态信息、事件流或时间表面时，或者当在线参数发生更改时。
+  */
   // callback functions
   events_left_sub_  = nh_.subscribe<dvs_msgs::EventArray>("events_left", 0, boost::bind(&esvo_Mapping::eventsCallback, this, _1, boost::ref(events_left_)));
   events_right_sub_ = nh_.subscribe<dvs_msgs::EventArray>("events_right", 0, boost::bind(&esvo_Mapping::eventsCallback, this, _1, boost::ref(events_right_)));
