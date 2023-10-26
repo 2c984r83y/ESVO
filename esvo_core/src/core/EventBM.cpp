@@ -85,14 +85,23 @@ bool esvo_core::core::EventBM::match_an_event(
   size_t lowDisparity = pDisparityBound.first;
   size_t upDisparity  = pDisparityBound.second;
   // rectify and floor the coordinate
-  Eigen::Vector2d x_rect = camSysPtr_->cam_left_ptr_->getRectifiedUndistortedCoordinate(pEvent->x, pEvent->y);
+  Eigen::Vector2d x_rect = camSysPtr_->cam_left_ptr_->getRectifiedUndistortedCoordinate(pEvent->x, pEvent->y);  // x_rect = [u_rect, v_rect]
+  
   // check if the rectified and undistorted coordinates are outside the image plane. (Added by Yi Zhou on 12 Jan 2021)
+  // x_rect(0) is u_rect, x_rect(1) is v_rect
+  // ---------> u_rect
+  // |
+  // |
+  // |
+  // ↓
+  // v_rect
   if(x_rect(0) < 0 || x_rect(0) > camSysPtr_->cam_left_ptr_->width_ - 1 ||
      x_rect(1) < 0 || x_rect(1) > camSysPtr_->cam_left_ptr_->height_ - 1)
     return false;
   // This is to avoid depth estimation happening in the mask area.
   if(camSysPtr_->cam_left_ptr_->UndistortRectify_mask_(x_rect(1), x_rect(0)) <= 125)
     return false;
+  // x1 in the left time_surface
   Eigen::Vector2i x1(std::floor(x_rect(0)), std::floor(x_rect(1)));
   Eigen::Vector2i x1_left_top;
   if(!isValidPatch(x1, x1_left_top))
@@ -149,13 +158,14 @@ bool esvo_core::core::EventBM::match_an_event(
       disparity = x1(1) - bestMatch(1);
     else
       disparity = x1(0) - bestMatch(0);
+
     double depth = camSysPtr_->baseline_ * camSysPtr_->cam_left_ptr_->P_(0,0) / disparity;
 
     auto st_map_iter = tools::StampTransformationMap_lower_bound(*pSt_map_, emPair.t_);
     if(st_map_iter == pSt_map_->end())
       return false;
     emPair.trans_ = st_map_iter->second;
-    emPair.invDepth_ = 1.0 / depth;
+    emPair.invDepth_ = 1.0 / depth; // invDepth_ = 1.0 / depth
     emPair.cost_ = min_cost;
     emPair.disp_ = disparity;
     return true;
@@ -166,7 +176,7 @@ bool esvo_core::core::EventBM::match_an_event(
     return false;
   }
 }
-
+// patch_src is left patch, patch_dst is right patch
 bool esvo_core::core::EventBM::epipolarSearching(
   double& min_cost, Eigen::Vector2i& bestMatch, size_t& bestDisp, Eigen::MatrixXd& patch_dst,
   size_t searching_start_pos, size_t searching_end_pos, size_t searching_step,
@@ -175,20 +185,21 @@ bool esvo_core::core::EventBM::epipolarSearching(
   bool bFoundOneMatch = false;
   std::map<size_t, double> mDispCost;
 
+  // searching along the epipolar line (heading to the left direction)
   for(size_t disp = searching_start_pos;disp <= searching_end_pos; disp+=searching_step)
   {
     Eigen::Vector2i x2;
     if(!bUpDownConfiguration)
-      x2 << x1(0) - disp, x1(1);
+      x2 << x1(0) - disp, x1(1);  // x2 = [x1(0) - disp, x1(1)]
     else
-      x2 << x1(0), x1(1) - disp;
+      x2 << x1(0), x1(1) - disp;  // x2 = [x1(0), x1(1) - disp]
     Eigen::Vector2i x2_left_top;
     if(!isValidPatch(x2, x2_left_top))
     {
-      mDispCost.emplace(disp, ZNCC_MAX_);
+      mDispCost.emplace(disp, ZNCC_MAX_); // ZNCC_MAX_ = 1.0
       continue;
     }
-
+    // extract the template patch in the right time_surface
     patch_dst = pStampedTsObs_->second.TS_right_.block(
       x2_left_top(1), x2_left_top(0), patch_size_Y_, patch_size_X_);
     double cost = ZNCC_MAX_;
@@ -204,11 +215,18 @@ bool esvo_core::core::EventBM::epipolarSearching(
 //    LOG(INFO) << "epipolar searching: " << disp;
   }
 
+// 检查在搜索范围内是否存在左右两侧的匹配。
+// 如果存在，则检查它们的代价是否小于 ZNCC_MAX_，
+// 如果是，则返回 true，表示找到了至少一个匹配。
+// 如果不存在，则返回 false，表示没有找到匹配。
   if(searching_step > 1)// coarse
   {
+    // mDispCost.end()指向map中不存在的元素
+    // 确保两端都有匹配
     if(mDispCost.find(bestDisp - searching_step) != mDispCost.end() &&
        mDispCost.find(bestDisp + searching_step) != mDispCost.end())
     {
+      // 如果两端的匹配成本都小于阈值，则认为找到了一个匹配
       if(mDispCost[bestDisp - searching_step] < ZNCC_MAX_ && mDispCost[bestDisp + searching_step] < ZNCC_MAX_ )
         if(min_cost < ZNCC_Threshold_)
           bFoundOneMatch = true;
@@ -281,7 +299,7 @@ void esvo_core::core::EventBM::match_all_HyperThread(
   std::vector<std::thread> threads;
   threads.reserve(NUM_THREAD_);
   for(size_t i = 0; i< NUM_THREAD_; i++)
-    threads.emplace_back(std::bind(&EventBM::match, this, jobs[i]));
+    threads.emplace_back(std::bind(&EventBM::match, this, jobs[i]));    // esvo_core::core::EventBM::match()
   for(auto & thread : threads)
   {
     if(thread.joinable())
@@ -320,6 +338,8 @@ double esvo_core::core::EventBM::zncc_cost(
   bool normalized)
 {
   double cost;
+  // tools::normalizePatch normalizePatch(Eigen::MatrixXd& patch_src,Eigen::MatrixXd& patch_dst) 
+  // patch_src 中的每个元素减去均值，再除以标准差，得到patch_dst。
   if(!normalized)
   {
     Eigen::MatrixXd patch_left_normalized, patch_right_normalized;

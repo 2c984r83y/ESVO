@@ -89,10 +89,10 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
             size_t u_i, v_i;
             if(uv_rect(0) >= 0 && uv_rect(1) >= 0)
             {
-              u_i = std::floor(uv_rect(0));
-              v_i = std::floor(uv_rect(1));
+              u_i = std::floor(uv_rect(0)); // x coordinate, 下取整
+              v_i = std::floor(uv_rect(1)); // y coordinate, 下取整
 
-              if(u_i + 1 < sensor_size_.width && v_i + 1 < sensor_size_.height)
+              if(u_i + 1 < sensor_size_.width && v_i + 1 < sensor_size_.height) //  防越界
               {
                 double fu = uv_rect(0) - u_i;
                 double fv = uv_rect(1) - v_i;

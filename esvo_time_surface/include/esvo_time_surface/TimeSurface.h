@@ -48,7 +48,8 @@ public:
         eq.pop_front();
     }
   }
-
+  
+  // 找到距离时间 t 最近的事件
   bool getMostRecentEventBeforeT(
     const size_t x,
     const size_t y,
@@ -57,11 +58,14 @@ public:
   {
     if(!insideImage(x, y))
       return false;
-
-    EventQueue& eq = getEventQueue(x, y);
+    // using EventQueue = std::deque<dvs_msgs::Event>;
+    // 双向开口的deque，可以从头尾两端进行插入和删除操作
+    EventQueue& eq = getEventQueue(x, y); // 访问向量中第 x + width_ * y 个元素
     if(eq.empty())
-      return false;
+      return false; // 如果该像素点没有事件，返回false
 
+    // 从后往前遍历deque，找到第一个时间戳小于t的事件
+    // 即找到距离时间 t 最近的事件
     for(auto it = eq.rbegin(); it != eq.rend(); ++it)
     {
       const dvs_msgs::Event& e = *it;
@@ -86,7 +90,7 @@ public:
 
   inline EventQueue& getEventQueue(const size_t x, const size_t y)
   {
-    return eqMat_[x + width_ * y];
+    return eqMat_[x + width_ * y];  // 访问向量中第 x + width_ * y 个元素
   }
 
   size_t width_;
