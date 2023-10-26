@@ -12,7 +12,8 @@ catkin_simple(ALL_DEPS_REQUIRED)
 
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
 
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
+find_package(OpenCV 4)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 

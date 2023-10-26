@@ -26,7 +26,7 @@
   </node>
 
   <!-- Calibration folder -->
-  <arg name="calibInfoDirStr" default="$(find esvo_core)/calib/hkust"/>
+  <arg name="calibInfoDirStr" default="$(find esvo_core)/calib/upenn"/>
 
   <!-- Mapping node -->
   <!-- launch-prefix="gdb -ex run -\-args" -->
@@ -41,7 +41,7 @@
     <rosparam param="world_frame_id">"map"</rosparam>
     <rosparam param="calibInfoDir" subst_value="true">$(arg calibInfoDirStr)</rosparam>
 
-    <rosparam command="load" file="$(find esvo_core)/cfg/mapping/mapping_hkust.yaml" />
+    <rosparam command="load" file="$(find esvo_core)/cfg/mapping/mapping_upenn.yaml" />
   </node>
 
   <!-- Tracking node -->
@@ -57,7 +57,7 @@
     <rosparam param="world_frame_id">"map"</rosparam>
     <rosparam param="calibInfoDir" subst_value="true">$(arg calibInfoDirStr)</rosparam>
 
-    <rosparam command="load" file="$(find esvo_core)/cfg/tracking/tracking_hkust.yaml" />
+    <rosparam command="load" file="$(find esvo_core)/cfg/tracking/tracking_upenn.yaml" />
   </node>
 
   <!-- Visualization -->

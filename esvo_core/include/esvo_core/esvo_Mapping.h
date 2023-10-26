@@ -1,6 +1,6 @@
 #ifndef ESVO_CORE_MAPPING_H
 #define ESVO_CORE_MAPPING_H
-
+#include <iostream>
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 
@@ -36,6 +36,11 @@
 #include <cv_bridge/cv_bridge.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
+
+
+#include <boost/thread/thread.hpp> 
+#include <boost/thread/mutex.hpp>
+
 
 namespace esvo_core
 {
