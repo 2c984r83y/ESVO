@@ -21,8 +21,7 @@
 
   <!-- Synchronize both TS processing using an external timer -->
   <node name="global_timer" pkg="rostopic" type="rostopic" args="pub -s -r 100 /sync std_msgs/Time 'now' " />
+  
 
-  <!-- Visualization -->
-  <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"
-        args="--perspective-file $(find esvo_time_surface)/esvo_time_surface.perspective" />
+
 </launch>

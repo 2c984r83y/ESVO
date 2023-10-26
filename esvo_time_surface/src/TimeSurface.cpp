@@ -47,6 +47,8 @@ void TimeSurface::init(int width, int height)
   bSensorInitialized_ = true;
   pEventQueueMat_.reset(new EventQueueMat(width, height, max_event_queue_length_));
   ROS_INFO("Sensor size: (%d x %d)", sensor_size_.width, sensor_size_.height);
+  // opencv version
+  ROS_INFO("Opencv Verison: %s", CV_VERSION);
 }
 
 void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)

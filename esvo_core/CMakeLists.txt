@@ -9,8 +9,12 @@ set(CMAKE_CXX_FLAGS "-O3")
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
+find_package(OpenCV 4)
 
+find_package(Boost REQUIRED COMPONENTS
+    thread
+)
 ###########
 ## Build ##
 ###########
@@ -65,7 +69,8 @@ cs_add_library(${PROJECT_NAME}_LIB ${SOURCES} ${HEADERS})
 cs_add_executable(esvo_Mapping src/esvo_MappingNode.cpp
     src/esvo_Mapping.cpp include/esvo_core/esvo_Mapping.h)
 target_link_libraries(esvo_Mapping ${PROJECT_NAME}_LIB
-    ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp)
+    ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp -pthread -lboost_serialization
+    )
 
 # Node esvo_Tracking
 cs_add_executable(esvo_Tracking src/esvo_TrackingNode.cpp
@@ -79,4 +84,4 @@ cs_add_executable(esvo_MVStereo
     src/esvo_MVStereo.cpp
     include/esvo_core/esvo_MVStereo.h)
 target_link_libraries(esvo_MVStereo ${PROJECT_NAME}_LIB
-    ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp)
+    ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp )
