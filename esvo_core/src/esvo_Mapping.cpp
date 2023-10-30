@@ -339,6 +339,7 @@ void esvo_Mapping::MappingAtTime(const ros::Time& t)
 #ifdef ESVO_CORE_MAPPING_DEBUG
   LOG(INFO) << "Nonlinear optimization returns: " << vdp.size() << " estimates.";
 #endif
+  // 剔除不合格的点
   dpSolver_.pointCulling(vdp, stdVar_vis_threshold_, cost_vis_threshold_,
                          invDepth_min_range_, invDepth_max_range_);
 #ifdef ESVO_CORE_MAPPING_DEBUG

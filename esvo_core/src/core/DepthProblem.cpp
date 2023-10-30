@@ -30,7 +30,11 @@ void DepthProblem::setProblem(
   vT_left_virtual_.push_back(T_left_virtual.block<3,4>(0,0));
   resetNumberValues(dpConfigPtr_->patchSize_X_ * dpConfigPtr_->patchSize_Y_);
 }
-
+// 将输入向量x作为参数，并计算输出向量fvec
+// 优化了DepthProblem类中的operator()函数，
+// 该函数的输入是一个VectorXd类型的向量x，输出是一个VectorXd类型的向量fvec。
+// 在Levenberg-Marquardt算法中，它将x作为参数输入到operator()函数中，并计算fvec。
+// 算法的目标是通过调整x的值来最小化fvec的平方和。
 int DepthProblem::operator()( const Eigen::VectorXd &x, Eigen::VectorXd & fvec ) const
 {
   size_t wx = dpConfigPtr_->patchSize_X_;

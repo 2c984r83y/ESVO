@@ -24,9 +24,9 @@ DepthProblemSolver::DepthProblemSolver(
 DepthProblemSolver::~DepthProblemSolver()
 {
 }
-
+// dpSolver_.solve(&vEMP, &TS_obs_, vdp);
 void DepthProblemSolver::solve(
-  std::vector<EventMatchPair>* pvEMP,
+  std::vector<EventMatchPair>* pvEMP, // ZNCC匹配出的对
   StampedTimeSurfaceObs* pStampedTsObs,
   std::vector<DepthPoint> &vdp )
 {
@@ -144,6 +144,10 @@ bool DepthProblemSolver::solve_single_problem_numerical(
   x << d_init;
 
   // 创建 Levenberg-Marquardt 优化器 lm，使用数值微分对象进行初始化
+  // 要优化的目标函数是 DepthProblem 类中的 operator() 函数，
+  // 它计算了当前深度估计下的重投影误差。
+  // 这个函数的输入是一个深度值，输出是重投影误差。
+  // 优化器的目标是最小化这个函数的输出，以得到最优的深度估计。
   Eigen::LevenbergMarquardt<Eigen::NumericalDiff<DepthProblem>, double> lm(*(dProblemPtr.get()));
   lm.resetParameters();
   lm.parameters.ftol = 1e-6; // 设置函数值变化的容忍度
