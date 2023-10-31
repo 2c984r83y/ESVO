@@ -41,7 +41,7 @@ void DepthProblemSolver::solve(
     jobs[i].pStamped_TS_obs_ = pStampedTsObs;
     if(dpType_ == NUMERICAL)
       jobs[i].numDiff_dProblemPtr_ = std::make_shared<Eigen::NumericalDiff<DepthProblem> >(dpConfigPtr_, camSysPtr_);
-    else if(dpType_ == )
+    else if(dpType_ == ANALYTICAL)
       jobs[i].dProblemPtr_ = std::make_shared<DepthProblem>(dpConfigPtr_, camSysPtr_); //NOTE: The ANALYTICAL version is not provided in this version.
     else
     {
