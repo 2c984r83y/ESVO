@@ -1,7 +1,5 @@
 # ESVO: Event-based Stereo Visual Odometry
 
-fork from ESVO
-
 **ESVO** is a novel pipeline for real-time visual odometry using a stereo event-based camera. Both the proposed mapping and tracking methods leverage a unified event representation (Time Surfaces), thus, it could be regarded as a ''direct'', geometric method using raw event as input.
 
 Please refer to the **[ESVO Project Page](https://sites.google.com/view/esvo-project-page/home)** for more detailed information and for testing event data.
