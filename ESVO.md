@@ -213,10 +213,10 @@ roslaunch esvo_time_surface upenn_indoor_flying1.launch
 ```
 
 **`system_hkust` 有bug**
-
+一直不停地 Initialization, 导致程序崩溃 
 ```bash
 roslaunch esvo_core system_hkust.launch
-roslaunch esvo_time_surface system_hkust.launch
+roslaunch esvo_time_surface hkust_lab.launch
 ```
 
 #### RPG DATASET
