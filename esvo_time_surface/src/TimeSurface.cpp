@@ -13,9 +13,23 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   : nh_(nh)
 {
   // setup subscribers and publishers
+  // TimeSurface::eventsCallback 是回 sub event 的回调函数
+  // 当 event_sub_ 收到 event 时，就会调用 TimeSurface::eventsCallback
+  // 队列大小为0，表示缓存队列无限大
+  // this 表示回调函数在当前对象的上下文中执行
+  // this 可以在回调函数中访问当前对象的成员变量，就像在类的成员函数中一样
+  // e.g.
+  //   void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
+  // {
+  //     // 在这里，this 指向调用 eventsCallback 的 TimeSurface 对象
+  //     this->some_member_variable = some_value;
+  // }
   event_sub_ = nh_.subscribe("events", 0, &TimeSurface::eventsCallback, this);
   camera_info_sub_ = nh_.subscribe("camera_info", 1, &TimeSurface::cameraInfoCallback, this);
+  // sync_topic_ 是同步时间的 topic
+  // 根据 NUM_THREAD_TS 的值，启动 createTimeSurfaceAtTime 或是 createTimeSurfaceAtTime_hyperthread
   sync_topic_ = nh_.subscribe("sync", 1, &TimeSurface::syncCallback, this);
+  // image_transport::Publisher time_surface_pub_;
   image_transport::ImageTransport it_(nh_);
   time_surface_pub_ = it_.advertise("time_surface", 1);
 
