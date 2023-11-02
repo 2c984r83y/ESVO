@@ -30,6 +30,7 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   // 根据 NUM_THREAD_TS 的值，启动 createTimeSurfaceAtTime 或是 createTimeSurfaceAtTime_hyperthread
   sync_topic_ = nh_.subscribe("sync", 1, &TimeSurface::syncCallback, this);
   // image_transport::Publisher time_surface_pub_;
+  // 
   image_transport::ImageTransport it_(nh_);
   time_surface_pub_ = it_.advertise("time_surface", 1);
 
