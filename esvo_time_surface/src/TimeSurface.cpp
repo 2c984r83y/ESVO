@@ -44,7 +44,7 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   time_surface_mode_ = (TimeSurfaceMode)TS_mode;
   nh_private.param<int>("median_blur_kernel_size", median_blur_kernel_size_, 1);
   nh_private.param<int>("max_event_queue_len", max_event_queue_length_, 20);
-  //
+  
   bCamInfoAvailable_ = false;
   bSensorInitialized_ = false;
   if(pEventQueueMat_)
@@ -108,6 +108,7 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
           // Forward version
           if(time_surface_mode_ == FORWARD && bCamInfoAvailable_)
           {
+            // pre-compute the undistorted-rectified look-up table 
             Eigen::Matrix<double, 2, 1> uv_rect = precomputed_rectified_points_.block<2, 1>(0, y * sensor_size_.width + x);
             size_t u_i, v_i;
             if(uv_rect(0) >= 0 && uv_rect(1) >= 0)
@@ -117,6 +118,7 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
 
               if(u_i + 1 < sensor_size_.width && v_i + 1 < sensor_size_.height) //  防越界
               {
+                // apply the exp decay on the four neighbouring (involved) pixel coordinate
                 double fu = uv_rect(0) - u_i;
                 double fv = uv_rect(1) - v_i;
                 double fu1 = 1.0 - fu;
@@ -163,12 +165,13 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
     cv_image.header.stamp = external_sync_time;
     time_surface_pub_.publish(cv_image.toImageMsg());
   }
-
+   
   if (time_surface_mode_ == BACKWARD && bCamInfoAvailable_ && time_surface_pub_.getNumSubscribers() > 0)
   {
     cv_bridge::CvImage cv_image2;
     cv_image2.encoding = cv_image.encoding;
     cv_image2.header.stamp = external_sync_time;
+    // BACKWARD 在这里进行 rect，矩阵来自于 cameraInfoCallback  
     cv::remap(cv_image.image, cv_image2.image, undistort_map1_, undistort_map2_, CV_INTER_LINEAR);
     time_surface_pub_.publish(cv_image2.toImageMsg());
   }
@@ -433,7 +436,7 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
 
 void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
 {
-  // 加锁
+  // 加锁保护 data_mutex_, 防止多个线程同时访问
   std::lock_guard<std::mutex> lock(data_mutex_);
   // 执行 inti
   if(!bSensorInitialized_)
