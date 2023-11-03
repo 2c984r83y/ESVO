@@ -438,7 +438,7 @@ void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
 {
   // 加锁保护 data_mutex_, 防止多个线程同时访问
   std::lock_guard<std::mutex> lock(data_mutex_);
-  // 执行 inti
+  // 执行 init
   if(!bSensorInitialized_)
     init(msg->width, msg->height);
 
