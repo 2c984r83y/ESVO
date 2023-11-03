@@ -250,12 +250,16 @@ void TimeSurface::createTimeSurfaceAtTime_hyperthread(const ros::Time& external_
 
 void TimeSurface::thread(Job &job)
 {
+ // 获取事件队列矩阵和时间表面映射
   EventQueueMat & eqMat = *job.pEventQueueMat_;
   cv::Mat& time_surface_map = *job.pTimeSurface_;
+  // 获取起始列和结束列
   size_t start_col = job.start_col_;
   size_t end_col = job.end_col_;
+  // 获取起始行和结束行
   size_t start_row = job.start_row_;
   size_t end_row = job.end_row_;
+  // 获取线程编号
   size_t i_thread = job.i_thread_;
 
   for(size_t y = start_row; y <= end_row; y++)
@@ -336,9 +340,11 @@ void TimeSurface::syncCallback(const std_msgs::TimeConstPtr& msg)
 
 void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 {
+  // 如果相机信息已经加载，则返回
   if(bCamInfoAvailable_)
     return;
 
+  // 加载相机内参
   cv::Size sensor_size(msg->width, msg->height);
   camera_matrix_ = cv::Mat(3, 3, CV_64F);
   for (int i = 0; i < 3; i++)
@@ -360,6 +366,7 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
     for (int j = 0; j < 3; j++)
       projection_matrix_.at<double>(cv::Point(i, j)) = msg->P[i+j*4];
 
+  // 根据distortion_model_参数，加载不同的相机信息
   if(distortion_model_ == "equidistant")
   {
     cv::fisheye::initUndistortRectifyMap(camera_matrix_, dist_coeffs_,
@@ -426,11 +433,13 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
 
 void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
 {
+  // 加锁
   std::lock_guard<std::mutex> lock(data_mutex_);
   // 执行 inti
   if(!bSensorInitialized_)
     init(msg->width, msg->height);
 
+  // 将消息中的事件添加到队列中
   for(const dvs_msgs::Event& e : msg->events)
   {
     events_.push_back(e);
@@ -442,12 +451,13 @@ void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
     }
     events_[i+1] = e;
 
+    // 将最后一个事件添加到事件队列中
     const dvs_msgs::Event& last_event = events_.back();
     pEventQueueMat_->insertEvent(last_event);
   }
+  // 清除事件队列
   clearEventQueue();
 }
-
 void TimeSurface::clearEventQueue()
 {
   static constexpr size_t MAX_EVENT_QUEUE_LENGTH = 5000000;
