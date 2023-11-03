@@ -319,7 +319,7 @@ void TimeSurface::thread(Job &job)
         }
       } // a most recent event is available
     }
-}
+}   
 
 void TimeSurface::syncCallback(const std_msgs::TimeConstPtr& msg)
 {
