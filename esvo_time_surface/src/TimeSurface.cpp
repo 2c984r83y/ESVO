@@ -30,7 +30,8 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   // 根据 NUM_THREAD_TS 的值，启动 createTimeSurfaceAtTime 或是 createTimeSurfaceAtTime_hyperthread
   sync_topic_ = nh_.subscribe("sync", 1, &TimeSurface::syncCallback, this);
   // image_transport::Publisher time_surface_pub_;
-  // 
+  // 用于传输 ROS 中的图像消息
+  // 创建 it_ 对象用于发布 TimeSurface
   image_transport::ImageTransport it_(nh_);
   time_surface_pub_ = it_.advertise("time_surface", 1);
 
@@ -43,7 +44,7 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   time_surface_mode_ = (TimeSurfaceMode)TS_mode;
   nh_private.param<int>("median_blur_kernel_size", median_blur_kernel_size_, 1);
   nh_private.param<int>("max_event_queue_len", max_event_queue_length_, 20);
-  //
+  
   bCamInfoAvailable_ = false;
   bSensorInitialized_ = false;
   if(pEventQueueMat_)
@@ -94,7 +95,12 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
           double expVal = std::exp(-dt / decay_sec);
           if(!ignore_polarity_)
             expVal *= polarity;
-
+          // Time Surface Mode
+          // Backward: First Apply exp decay on the raw image plane, then get the value
+          //           at each pixel in the rectified image plane by looking up the
+          //           corresponding one (float coordinates) with bi-linear interpolation.
+          // Forward: First warp the raw events to the rectified image plane, then
+          //          apply the exp decay on the four neighbouring (involved) pixel coordinate.
           // Backward version
           if(time_surface_mode_ == BACKWARD)
             time_surface_map.at<double>(y,x) = expVal;
@@ -102,6 +108,7 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
           // Forward version
           if(time_surface_mode_ == FORWARD && bCamInfoAvailable_)
           {
+            // pre-compute the undistorted-rectified look-up table 
             Eigen::Matrix<double, 2, 1> uv_rect = precomputed_rectified_points_.block<2, 1>(0, y * sensor_size_.width + x);
             size_t u_i, v_i;
             if(uv_rect(0) >= 0 && uv_rect(1) >= 0)
@@ -111,6 +118,7 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
 
               if(u_i + 1 < sensor_size_.width && v_i + 1 < sensor_size_.height) //  防越界
               {
+                // apply the exp decay on the four neighbouring (involved) pixel coordinate
                 double fu = uv_rect(0) - u_i;
                 double fv = uv_rect(1) - v_i;
                 double fu1 = 1.0 - fu;
@@ -157,12 +165,13 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
     cv_image.header.stamp = external_sync_time;
     time_surface_pub_.publish(cv_image.toImageMsg());
   }
-
+   
   if (time_surface_mode_ == BACKWARD && bCamInfoAvailable_ && time_surface_pub_.getNumSubscribers() > 0)
   {
     cv_bridge::CvImage cv_image2;
     cv_image2.encoding = cv_image.encoding;
     cv_image2.header.stamp = external_sync_time;
+    // BACKWARD 在这里进行 rect，矩阵来自于 cameraInfoCallback  
     cv::remap(cv_image.image, cv_image2.image, undistort_map1_, undistort_map2_, CV_INTER_LINEAR);
     time_surface_pub_.publish(cv_image2.toImageMsg());
   }
@@ -202,6 +211,7 @@ void TimeSurface::createTimeSurfaceAtTime_hyperthread(const ros::Time& external_
 
   // hyper thread processing
   std::vector<std::thread> threads;
+  // allocate memory for the vector without actually adding any elements to it
   threads.reserve(NUM_THREAD_TS);
   for(size_t i = 0; i < NUM_THREAD_TS; i++)
     threads.emplace_back(std::bind(&TimeSurface::thread, this, jobs[i]));
@@ -243,12 +253,16 @@ void TimeSurface::createTimeSurfaceAtTime_hyperthread(const ros::Time& external_
 
 void TimeSurface::thread(Job &job)
 {
+ // 获取事件队列矩阵和时间表面映射
   EventQueueMat & eqMat = *job.pEventQueueMat_;
   cv::Mat& time_surface_map = *job.pTimeSurface_;
+  // 获取起始列和结束列
   size_t start_col = job.start_col_;
   size_t end_col = job.end_col_;
+  // 获取起始行和结束行
   size_t start_row = job.start_row_;
   size_t end_row = job.end_row_;
+  // 获取线程编号
   size_t i_thread = job.i_thread_;
 
   for(size_t y = start_row; y <= end_row; y++)
@@ -329,9 +343,11 @@ void TimeSurface::syncCallback(const std_msgs::TimeConstPtr& msg)
 
 void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 {
+  // 如果相机信息已经加载，则返回
   if(bCamInfoAvailable_)
     return;
 
+  // 加载相机内参
   cv::Size sensor_size(msg->width, msg->height);
   camera_matrix_ = cv::Mat(3, 3, CV_64F);
   for (int i = 0; i < 3; i++)
@@ -353,6 +369,7 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
     for (int j = 0; j < 3; j++)
       projection_matrix_.at<double>(cv::Point(i, j)) = msg->P[i+j*4];
 
+  // 根据distortion_model_参数，加载不同的相机信息
   if(distortion_model_ == "equidistant")
   {
     cv::fisheye::initUndistortRectifyMap(camera_matrix_, dist_coeffs_,
@@ -419,11 +436,13 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
 
 void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
 {
+  // 加锁保护 data_mutex_, 防止多个线程同时访问
   std::lock_guard<std::mutex> lock(data_mutex_);
-
+  // 执行 inti
   if(!bSensorInitialized_)
     init(msg->width, msg->height);
 
+  // 将消息中的事件添加到队列中
   for(const dvs_msgs::Event& e : msg->events)
   {
     events_.push_back(e);
@@ -435,12 +454,13 @@ void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
     }
     events_[i+1] = e;
 
+    // 将最后一个事件添加到事件队列中
     const dvs_msgs::Event& last_event = events_.back();
     pEventQueueMat_->insertEvent(last_event);
   }
+  // 清除事件队列
   clearEventQueue();
 }
-
 void TimeSurface::clearEventQueue()
 {
   static constexpr size_t MAX_EVENT_QUEUE_LENGTH = 5000000;
