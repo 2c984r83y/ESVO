@@ -30,7 +30,8 @@ TimeSurface::TimeSurface(ros::NodeHandle & nh, ros::NodeHandle nh_private)
   // 根据 NUM_THREAD_TS 的值，启动 createTimeSurfaceAtTime 或是 createTimeSurfaceAtTime_hyperthread
   sync_topic_ = nh_.subscribe("sync", 1, &TimeSurface::syncCallback, this);
   // image_transport::Publisher time_surface_pub_;
-  // 
+  // 用于传输 ROS 中的图像消息
+  // 创建 it_ 对象用于发布 TimeSurface
   image_transport::ImageTransport it_(nh_);
   time_surface_pub_ = it_.advertise("time_surface", 1);
 
@@ -94,7 +95,12 @@ void TimeSurface::createTimeSurfaceAtTime(const ros::Time& external_sync_time)
           double expVal = std::exp(-dt / decay_sec);
           if(!ignore_polarity_)
             expVal *= polarity;
-
+          // Time Surface Mode
+          // Backward: First Apply exp decay on the raw image plane, then get the value
+          //           at each pixel in the rectified image plane by looking up the
+          //           corresponding one (float coordinates) with bi-linear interpolation.
+          // Forward: First warp the raw events to the rectified image plane, then
+          //          apply the exp decay on the four neighbouring (involved) pixel coordinate.
           // Backward version
           if(time_surface_mode_ == BACKWARD)
             time_surface_map.at<double>(y,x) = expVal;
@@ -202,6 +208,7 @@ void TimeSurface::createTimeSurfaceAtTime_hyperthread(const ros::Time& external_
 
   // hyper thread processing
   std::vector<std::thread> threads;
+  // allocate memory for the vector without actually adding any elements to it
   threads.reserve(NUM_THREAD_TS);
   for(size_t i = 0; i < NUM_THREAD_TS; i++)
     threads.emplace_back(std::bind(&TimeSurface::thread, this, jobs[i]));
@@ -420,7 +427,7 @@ void TimeSurface::cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& ms
 void TimeSurface::eventsCallback(const dvs_msgs::EventArray::ConstPtr& msg)
 {
   std::lock_guard<std::mutex> lock(data_mutex_);
-
+  // 执行 inti
   if(!bSensorInitialized_)
     init(msg->width, msg->height);
 
