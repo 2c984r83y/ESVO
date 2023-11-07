@@ -26,8 +26,10 @@ DepthProblemSolver::~DepthProblemSolver()
 }
 // dpSolver_.solve(&vEMP, &TS_obs_, vdp);
 void DepthProblemSolver::solve(
-  std::vector<EventMatchPair>* pvEMP, // ZNCC匹配出的对
+  // Block Match result
+  std::vector<EventMatchPair>* pvEMP, 
   StampedTimeSurfaceObs* pStampedTsObs,
+  // Nonlinear Optimization result
   std::vector<DepthPoint> &vdp )
 {
 //  TicToc tt;

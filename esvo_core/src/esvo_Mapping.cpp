@@ -278,8 +278,9 @@ void esvo_Mapping::MappingAtTime(const ros::Time& t)
   depthFramePtr_new->setId(TS_obs_.second.id_);
   depthFramePtr_new->setTransformation(TS_obs_.second.tr_);
   depthFramePtr_ = depthFramePtr_new;
-
-  std::vector<EventMatchPair> vEMP;// the container that stores the result of BM.
+  
+  // the container that stores the result of BM.
+  std::vector<EventMatchPair> vEMP;
   /****************************************************/
   /*************** Block Matching (BM) ****************/
   /****************************************************/
