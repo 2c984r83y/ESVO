@@ -34,7 +34,7 @@ void DepthProblemSolver::solve(
 {
 //  TicToc tt;
 //  tt.tic();
-  //distribute the loads
+  // distribute the loads
   std::vector<Job> jobs(NUM_THREAD_);
   for(size_t i = 0;i < NUM_THREAD_;i++)
   {
@@ -54,7 +54,7 @@ void DepthProblemSolver::solve(
   }
 //  LOG(INFO) << "(DepthProblemSolver) distribute the loads: " << tt.toc() << " ms.";
 //  tt.tic();
-  //
+  // 
   std::vector<std::thread> threads;
   for(size_t i = 0; i < NUM_THREAD_;i++)
     threads.emplace_back(std::bind(&DepthProblemSolver::solve_multiple_problems, this, jobs[i]));
@@ -91,6 +91,7 @@ void DepthProblemSolver::solve_multiple_problems(Job & job)
   // loop through vdp and call solve_single_problem
   for(size_t i = i_thread; i < numEvent; i+=NUM_THREAD_)
   {
+    // 得到坐标、位姿变换矩阵、初始深度估计
     Eigen::Vector2d coor = (*job.pvEMP_)[i].x_left_;
     Eigen::Matrix<double, 4, 4> T_world_virtual = (*job.pvEMP_)[i].trans_.getTransformationMatrix();
     double d_init = (*job.pvEMP_)[i].invDepth_;
@@ -99,6 +100,7 @@ void DepthProblemSolver::solve_multiple_problems(Job & job)
     bool bProblemSolved = false;
     if(dpType_ == NUMERICAL)
     {
+      // setProblem 坐标、位姿变换矩阵、 TimeSurface
       job.numDiff_dProblemPtr_->setProblem(coor, T_world_virtual, pStampedTsObs);
       bProblemSolved = solve_single_problem_numerical(d_init,job.numDiff_dProblemPtr_, result);
     }
@@ -143,6 +145,7 @@ bool DepthProblemSolver::solve_single_problem_numerical(
   double* result) // 存储优化结果的数组指针
 {
   Eigen::VectorXd x(1); // 创建具有一个元素的 Eigen 向量 x，表示初始深度估计
+  // << 是 Eigen 向量的赋值运算符
   x << d_init;
 
   // 创建 Levenberg-Marquardt 优化器 lm，使用数值微分对象进行初始化
