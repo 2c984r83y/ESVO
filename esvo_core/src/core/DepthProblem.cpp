@@ -165,6 +165,7 @@ int DepthProblem::operator()( const Eigen::VectorXd &x, Eigen::VectorXd & fvec )
   }
   return numValid;
 }
+
 // 将一个像素点从左目视角下的坐标系映射到右目视角下的坐标系。
 // 接受一个像素点的坐标和深度值，以及左目相机和右目相机之间的变换矩阵，
 // 然后计算出该像素点在左目和右目下的坐标，并检查这些坐标是否在图像边界内。

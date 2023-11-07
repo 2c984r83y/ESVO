@@ -24,6 +24,7 @@ DepthProblemSolver::DepthProblemSolver(
 DepthProblemSolver::~DepthProblemSolver()
 {
 }
+
 // dpSolver_.solve(&vEMP, &TS_obs_, vdp);
 void DepthProblemSolver::solve(
   // Block Match result
@@ -144,7 +145,9 @@ bool DepthProblemSolver::solve_single_problem_numerical(
   std::shared_ptr< Eigen::NumericalDiff<DepthProblem> > & dProblemPtr, // 数值微分对象指针
   double* result) // 存储优化结果的数组指针
 {
-  Eigen::VectorXd x(1); // 创建具有一个元素的 Eigen 向量 x，表示初始深度估计
+  // 创建具有一个元素的 Eigen 向量 x，表示初始深度估计
+  // 大小为 1
+  Eigen::VectorXd x(1); 
   // << 是 Eigen 向量的赋值运算符
   x << d_init;
 
