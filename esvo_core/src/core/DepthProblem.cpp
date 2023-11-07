@@ -30,6 +30,7 @@ void DepthProblem::setProblem(
   vT_left_virtual_.push_back(T_left_virtual.block<3,4>(0,0));
   resetNumberValues(dpConfigPtr_->patchSize_X_ * dpConfigPtr_->patchSize_Y_);
 }
+
 // 重载了DepthProblem类的()运算符
 // 将输入向量x作为参数，并计算输出向量fvec
 // 优化了DepthProblem类中的operator()函数，
