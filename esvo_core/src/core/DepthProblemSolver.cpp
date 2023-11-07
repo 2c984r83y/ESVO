@@ -224,6 +224,7 @@ bool DepthProblemSolver::solve_single_problem_numerical(
   return true;
 }
 
+// 移除无效的深度点
 void
 DepthProblemSolver::pointCulling(
   std::vector<DepthPoint> &vdp,

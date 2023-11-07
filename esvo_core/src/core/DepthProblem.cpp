@@ -165,7 +165,10 @@ int DepthProblem::operator()( const Eigen::VectorXd &x, Eigen::VectorXd & fvec )
   }
   return numValid;
 }
-
+// 将一个像素点从左目视角下的坐标系映射到右目视角下的坐标系。
+// 接受一个像素点的坐标和深度值，以及左目相机和右目相机之间的变换矩阵，
+// 然后计算出该像素点在左目和右目下的坐标，并检查这些坐标是否在图像边界内。
+// 如果坐标在图像边界内，则返回`true`，否则返回`false`。
 bool DepthProblem::warping(
   const Eigen::Vector2d &x,
   double d,
@@ -197,6 +200,7 @@ bool DepthProblem::warping(
   return true;
 }
 
+// 在图像中进行补丁插值
 bool DepthProblem::patchInterpolation(
   const Eigen::MatrixXd &img,
   const Eigen::Vector2d &location,
